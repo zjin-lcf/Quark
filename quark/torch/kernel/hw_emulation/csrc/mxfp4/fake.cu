@@ -4,6 +4,7 @@
 #include <torch/headeronly/core/ScalarType.h>
 
 #include <cstdint>
+#include <limits>
 
 #include "device_guard.h"
 #include "gpu_stream.h"
@@ -29,7 +30,7 @@ void launch_qdq_mxfp4(
   const torch::stable::Tensor& a, int64_t group_size, void* out_ptr
 ) {
   quark::DeviceGuard guard(a);
-  int numel = a.numel();
+  int64_t numel = a.numel();
   int block_size;
 
   if (numel % kBlockSizeLarge == 0) {
@@ -51,7 +52,14 @@ void launch_qdq_mxfp4(
     a.is_contiguous(), "Expected qdq_mxfp4 input to be contiguous!"
   );
 
-  dim3 dimGrid(numel / block_size, 1, 1);
+  int64_t grid_size = numel / block_size;
+
+  STD_TORCH_CHECK(
+    grid_size <= static_cast<int64_t>(std::numeric_limits<int>::max()),
+    "Grid size exceeds CUDA maximum grid dimension"
+  );
+
+  dim3 dimGrid(grid_size, 1, 1);
   dim3 dimBlock(block_size, 1, 1);  // < 1024: we are good!
 
   const cudaStream_t stream = getCurrentStream();

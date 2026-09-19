@@ -152,7 +152,7 @@ template <
 __global__ void qdq_mxfp4_kernel(float_type* inp, float_type* out) {
   // Each thread handles one element.
 
-  int idx = blockIdx.x * blockDim.x + threadIdx.x;
+  int64_t idx = static_cast<int64_t>(blockIdx.x) * blockDim.x + threadIdx.x;
 
   float_type elem = inp[idx];
   float_type block_max = habs_impl(elem);
